@@ -25,7 +25,7 @@ jobs:
     runs-on: runs-on,runner=4cpu-linux-x64
     steps:
       - name: Checkout latest codebase
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ env.sha }}
           clean: false
@@ -42,7 +42,7 @@ jobs:
           echo "APPROVAL PRODUCED BY SUCCESSFULL CHECKS EXECUTION WILL LAND IN CACHE"
           echo "HASH=$HASH" >> $GITHUB_OUTPUT
       - name: Check for CI successes
-        uses: runs-on/cache/restore@v4
+        uses: runs-on/cache/restore@a5f51d6f3fece787d03b7b4e981c82538a0654ed # v4
         with:
           key: ${{ runner.os }}-${{ env.REPOSITORY }}-approval-${{ steps.hash.outputs.HASH }}
           path: approval.txt

@@ -1,12 +1,12 @@
 version: 1
-generated_at: 2026-05-25T15:51:48Z
+generated_at: 2026-06-11T15:33:13Z
 internal: []
 trusted:
   - action: actions/checkout
     refs:
-      - v4
+      - 34e114876b0b11c390a56381ad16ebd13914f8d5
     occurrences:
-      v4:
+      34e114876b0b11c390a56381ad16ebd13914f8d5:
         .github/workflows/ci.yaml:
           - jobs.static.steps.[0].uses
           - jobs.test.steps.[0].uses
@@ -16,9 +16,9 @@ trusted:
           - jobs.dev-publish.steps.[0].uses
   - action: runs-on/cache
     refs:
-      - v4
+      - a5f51d6f3fece787d03b7b4e981c82538a0654ed
     occurrences:
-      v4:
+      a5f51d6f3fece787d03b7b4e981c82538a0654ed:
         .github/workflows/ci.yaml:
           - jobs.static.steps.[4].uses
           - jobs.static.steps.[6].uses
@@ -26,16 +26,16 @@ trusted:
           - jobs.test.steps.[6].uses
   - action: runs-on/cache/restore
     refs:
-      - v4
+      - a5f51d6f3fece787d03b7b4e981c82538a0654ed
     occurrences:
-      v4:
+      a5f51d6f3fece787d03b7b4e981c82538a0654ed:
         .github/workflows/dev-publish.yaml:
           - jobs.dev-publish.steps.[2].uses
   - action: runs-on/cache/save
     refs:
-      - v4
+      - a5f51d6f3fece787d03b7b4e981c82538a0654ed
     occurrences:
-      v4:
+      a5f51d6f3fece787d03b7b4e981c82538a0654ed:
         .github/workflows/ci.yaml:
           - jobs.permit.steps.[3].uses
 external:
