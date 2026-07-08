@@ -48,7 +48,7 @@ jobs:
           echo "APPROVAL PRODUCED BY SUCCESSFULL CHECKS EXECUTION WILL LAND IN CACHE"
           echo "HASH=$HASH" >> $GITHUB_OUTPUT
       - name: Check for CI successes
-        uses: runs-on/cache/restore@a5f51d6f3fece787d03b7b4e981c82538a0654ed # v4
+        uses: step-security/runs-on-cache/restore@c5b0cba15d05488ebc630ad8d1e95b3d9b35ac73 # v5.0.7
         with:
           key: ${{ runner.os }}-${{ env.REPOSITORY }}-approval-${{ steps.hash.outputs.HASH }}
           path: approval.txt
