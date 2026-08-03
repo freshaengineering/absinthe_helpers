@@ -53,14 +53,8 @@ jobs:
           key: ${{ runner.os }}-${{ env.REPOSITORY }}-approval-${{ steps.hash.outputs.HASH }}
           path: approval.txt
           fail-on-cache-miss: true
-      - name: Setup Elixir
-        uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1
-        env:
-          ImageOS: ${{ env.RUNNER_OS }}
-        with:
-          elixir-version: ${{ env.ELIXIR_VERSION }}
-          otp-version: ${{ env.OTP_VERSION }}
-          version-type: strict
+      - name: Setup mise
+        uses: step-security/mise-action@2796166110dee826668caddd4bffedae5116e7cd # v4.2.0
       - name: Hex auth
         run: mix hex.organization auth fresha --key ${{ secrets.HEX_ORGANIZATION_WRITE_KEY }}
         shell: bash
