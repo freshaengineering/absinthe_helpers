@@ -55,6 +55,8 @@ jobs:
           fail-on-cache-miss: true
       - name: Setup mise
         uses: step-security/mise-action@2796166110dee826668caddd4bffedae5116e7cd # v4.2.0
+      - name: Install Hex + Rebar
+        run: mix local.hex --force && mix local.rebar --force
       - name: Hex auth
         run: mix hex.organization auth fresha --key ${{ secrets.HEX_ORGANIZATION_WRITE_KEY }}
         shell: bash
