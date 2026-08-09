@@ -69,8 +69,6 @@ jobs:
           HASH="$(git ls-tree ${{ env.SHA }} -- ${{ env.RELEVANT_FILES }} | sha1sum | cut -d' ' -f1)"
           echo "BUILD HASH FOR THE CODEBASE IS: $HASH"
           echo "HASH=$HASH" >> $GITHUB_OUTPUT
-      - name: Hex auth
-        run: mix hex.organization auth fresha --key ${{ secrets.HEX_ORGANIZATION_WRITE_KEY }}
       - uses: step-security/runs-on-cache@c5b0cba15d05488ebc630ad8d1e95b3d9b35ac73 # v5.0.7
         id: deps-cache
         with:
@@ -152,8 +150,6 @@ jobs:
           HASH="$(git ls-tree ${{ env.SHA }} -- ${{ env.RELEVANT_FILES }} | sha1sum | cut -d' ' -f1)"
           echo "BUILD HASH FOR THE CODEBASE IS: $HASH"
           echo "HASH=$HASH" >> $GITHUB_OUTPUT
-      - name: Hex auth
-        run: mix hex.organization auth fresha --key ${{ secrets.HEX_ORGANIZATION_WRITE_KEY }}
       - uses: step-security/runs-on-cache@c5b0cba15d05488ebc630ad8d1e95b3d9b35ac73 # v5.0.7
         id: deps-cache
         with:
