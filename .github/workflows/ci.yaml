@@ -3,9 +3,9 @@ name: Elixir CI Checks
 env:
   DEBIAN_FRONTEND: noninteractive
   DEPENDENCY_FILE: mix.lock
-  ELIXIR_VERSION: 1.16.2
+  ELIXIR_VERSION: 1.18.3
   JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-  OTP_VERSION: 26.2.5
+  OTP_VERSION: 27.3
   RELEVANT_FILES: "mix.lock mix.exs lib priv config test"
   REPOSITORY: absinthe_helpers
   RUNNER_OS: ubuntu22
@@ -36,8 +36,8 @@ jobs:
       matrix:
         versions:
           - {
-              elixir-version: 1.16.2,
-              otp-version: 26.2.5,
+              elixir-version: 1.18.3,
+              otp-version: 27.3,
               runner-os: "ubuntu22",
             }
     steps:
@@ -117,8 +117,8 @@ jobs:
       matrix:
         versions:
           - {
-              elixir-version: 1.16.2,
-              otp-version: 26.2.5,
+              elixir-version: 1.18.3,
+              otp-version: 27.3,
               runner-os: "ubuntu22",
             }
     steps:
