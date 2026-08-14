@@ -180,6 +180,7 @@ jobs:
 
   permit:
     name: Permit Package Publishing
+    timeout-minutes: 25
     needs: [static, test]
     runs-on: runs-on,runner=1cpu-linux-x64
     outputs:
