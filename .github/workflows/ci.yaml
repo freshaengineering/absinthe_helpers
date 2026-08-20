@@ -262,7 +262,4 @@ jobs:
           # HEX_ORGANIZATION_WRITE_KEY, which used to do both, is revoked.
           hex-token: ${{ secrets.GH_FRESHAENGINEERING_ABSINTHE_HELPERS_HEX_PM_API_KEY }}
           hex-organization-key: ${{ secrets.GH_FRESHAENGINEERING_HEX_PM_API_KEY }}
-          elixir-version: ${{ env.ELIXIR_VERSION }}
-          otp-version: ${{ env.OTP_VERSION }}
-          runner-os: ${{ env.RUNNER_OS }}
           working-directory: ${{ github.workspace }}
