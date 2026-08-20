@@ -50,8 +50,7 @@ jobs:
       - name: Check for CI successes
         uses: step-security/runs-on-cache/restore@c5b0cba15d05488ebc630ad8d1e95b3d9b35ac73 # v5.0.7
         with:
-          # Key shape is set by elixir/permit, which saves this cache.
-          key: ${{ github.repository_id }}-${{ env.REPOSITORY }}-approval-${{ steps.hash.outputs.HASH }}
+          key: ${{ runner.os }}-${{ env.REPOSITORY }}-approval-${{ steps.hash.outputs.HASH }}
           path: approval.txt
           fail-on-cache-miss: true
       - name: Setup mise
