@@ -69,7 +69,8 @@ jobs:
       - name: Publish dev package
         shell: bash
         env:
-          # Package-scoped write key -- HEX_ORGANIZATION_WRITE_KEY is revoked.
+          # `fresha` org key with `api:write` -- see ci.yaml's Publish Package
+          # step for why a `repository:fresha` key cannot publish this package.
           HEX_API_KEY: ${{ secrets.GH_FRESHAENGINEERING_ABSINTHE_HELPERS_HEX_PM_API_KEY }}
         run: |
           echo "Publishing dev package"
