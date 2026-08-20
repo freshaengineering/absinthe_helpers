@@ -250,7 +250,7 @@ jobs:
       # elixir/publish checks out the SHA itself, so no separate
       # actions/checkout step is needed here.
       - name: Publish Package
-        uses: freshaengineering/platform-tribe-actions/elixir/publish@38cf7c5b442e7595fdacfd9b2c247d234cfa7592 # main
+        uses: freshaengineering/platform-tribe-actions/elixir/publish@7f48a2b1a03f0df7c865685b657068a80db68bad # main
         with:
           repository: ${{ env.REPOSITORY }}
           sha: ${{ env.SHA }}
