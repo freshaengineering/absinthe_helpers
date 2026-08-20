@@ -27,3 +27,4 @@ unleash-*.tar
 # Intellij
 .idea/
 *.iml
+.github/actions.lock.yaml
