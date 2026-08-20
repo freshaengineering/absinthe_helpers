@@ -100,7 +100,11 @@ jobs:
           mix format --check-formatted --dry-run
       - name: Run publish --dry-run
         env:
-          HEX_API_KEY: ${{ secrets.HEX_ORGANIZATION_WRITE_KEY }}
+          # --dry-run never uploads, but it still calls GET /users/me, and an
+          # *empty* HEX_API_KEY makes that raise instead of degrading. Use the
+          # org read key, which already exists, so this step keeps working
+          # regardless of the package-scoped write key's rollout.
+          HEX_API_KEY: ${{ secrets.GH_FRESHAENGINEERING_HEX_PM_API_KEY }}
         run: |
           echo "Running publish --dry-run"
           mix hex.publish --dry-run
@@ -243,25 +247,22 @@ jobs:
           use-policy-store: true
           api-key: ${{ secrets.GH_FRESHAENGINEERING_STEP_SECURITY_API_KEY }}
 
-      - name: Checkout latest codebase
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      # elixir/publish checks out the SHA itself, so no separate
+      # actions/checkout step is needed here.
+      - name: Publish Package
+        uses: freshaengineering/platform-tribe-actions/elixir/publish@38cf7c5b442e7595fdacfd9b2c247d234cfa7592 # main
         with:
-          ref: ${{ env.SHA }}
-          clean: false
-          persist-credentials: true
-      - name: Setup mise
-        uses: step-security/mise-action@2796166110dee826668caddd4bffedae5116e7cd # v4.2.0
-      - name: Install Hex + Rebar
-        run: mix local.hex --force && mix local.rebar --force
-      - name: Get dependencies
-        shell: bash
-        run: |
-          echo "Getting dependencies"
-          mix deps.get
-      - name: Publish dev package
-        shell: bash
-        env:
-          HEX_API_KEY: ${{ secrets.HEX_ORGANIZATION_WRITE_KEY }}
-        run: |
-          echo "Publishing package"
-          mix hex.publish --yes
+          repository: ${{ env.REPOSITORY }}
+          sha: ${{ env.SHA }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Package-scoped write key for the upload. The org read key only
+          # satisfies the action's unconditional `mix hex.organization auth
+          # fresha` step -- absinthe_helpers is a public hex.pm package with
+          # no private deps, so nothing here actually reads the fresha org.
+          # HEX_ORGANIZATION_WRITE_KEY, which used to do both, is revoked.
+          hex-token: ${{ secrets.GH_FRESHAENGINEERING_ABSINTHE_HELPERS_HEX_PM_API_KEY }}
+          hex-organization-key: ${{ secrets.GH_FRESHAENGINEERING_HEX_PM_API_KEY }}
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+          runner-os: ${{ env.RUNNER_OS }}
+          working-directory: ${{ github.workspace }}

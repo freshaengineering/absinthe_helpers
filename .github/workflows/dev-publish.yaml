@@ -69,7 +69,8 @@ jobs:
       - name: Publish dev package
         shell: bash
         env:
-          HEX_API_KEY: ${{ secrets.HEX_ORGANIZATION_WRITE_KEY }}
+          # Package-scoped write key -- HEX_ORGANIZATION_WRITE_KEY is revoked.
+          HEX_API_KEY: ${{ secrets.GH_FRESHAENGINEERING_ABSINTHE_HELPERS_HEX_PM_API_KEY }}
         run: |
           echo "Publishing dev package"
           mix hex.publish --yes
