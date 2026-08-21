@@ -3,9 +3,9 @@ name: Elixir CI Checks
 env:
   DEBIAN_FRONTEND: noninteractive
   DEPENDENCY_FILE: mix.lock
-  ELIXIR_VERSION: 1.16.2
+  ELIXIR_VERSION: 1.18.3
   JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-  OTP_VERSION: 26.2.5
+  OTP_VERSION: 27.3
   RELEVANT_FILES: "mix.lock mix.exs lib priv config test"
   REPOSITORY: absinthe_helpers
   RUNNER_OS: ubuntu22
@@ -36,8 +36,8 @@ jobs:
       matrix:
         versions:
           - {
-              elixir-version: 1.16.2,
-              otp-version: 26.2.5,
+              elixir-version: 1.18.3,
+              otp-version: 27.3,
               runner-os: "ubuntu22",
             }
     steps:
@@ -117,8 +117,8 @@ jobs:
       matrix:
         versions:
           - {
-              elixir-version: 1.16.2,
-              otp-version: 26.2.5,
+              elixir-version: 1.18.3,
+              otp-version: 27.3,
               runner-os: "ubuntu22",
             }
     steps:
@@ -214,8 +214,15 @@ jobs:
           old_version=$(grep -oP 'version: "\K[^"]+' mix.old.exs)
           new_version=$(grep -oP 'version: "\K[^"]+' mix.exs)
           echo "Old Version: $old_version | New Version: $new_version"
+          # Compare numerically via `sort -V`, not with `>`. A string compare
+          # puts "0.2.10" below "0.2.9" ('1' < '9' at the fifth character), so
+          # every x.y.9 -> x.y.10 bump read as a downgrade and was blocked.
+          # Versions committed here are always plain x.y.z; the -git- suffix is
+          # applied at runtime by dev-publish and never lands in mix.exs, so
+          # `sort -V`'s prerelease ordering is not exercised.
+          newest=$(printf '%s\n%s\n' "$old_version" "$new_version" | sort -V | tail -n1)
           if [ "$new_version" != "$old_version" ]; then
-            if [ "$new_version" \> "$old_version" ]; then
+            if [ "$new_version" = "$newest" ]; then
               echo "Version is upped - WILL publish upon merging the PR"
               echo "PUBLISH=true" >> $GITHUB_OUTPUT
             else
@@ -237,6 +244,7 @@ jobs:
 
   publish:
     name: Publish Hex Package
+    timeout-minutes: 25
     needs: [permit]
     runs-on: runs-on,runner=2cpu-linux-x64
     if: needs.permit.outputs.PUBLISH == 'true' && github.event_name == 'push'
@@ -247,19 +255,31 @@ jobs:
           use-policy-store: true
           api-key: ${{ secrets.GH_FRESHAENGINEERING_STEP_SECURITY_API_KEY }}
 
-      # elixir/publish checks out the SHA itself, so no separate
-      # actions/checkout step is needed here.
-      - name: Publish Package
-        uses: freshaengineering/platform-tribe-actions/elixir/publish@7f48a2b1a03f0df7c865685b657068a80db68bad # main
+      # Steps are inline, and every action used here is public, because this
+      # repository is public: GitHub cannot resolve a private action from a
+      # public repo, so `platform-tribe-actions/elixir/publish` fails at
+      # `Set up job` with "Unable to resolve action ... not found". Mirrors
+      # dev-publish.yaml minus the dev-suffix step. No `mix hex.organization
+      # auth` either -- this is a public hexpm package with no private deps.
+      - name: Checkout latest codebase
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          repository: ${{ env.REPOSITORY }}
-          sha: ${{ env.SHA }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # Package-scoped write key for the upload. The org read key only
-          # satisfies the action's unconditional `mix hex.organization auth
-          # fresha` step -- absinthe_helpers is a public hex.pm package with
-          # no private deps, so nothing here actually reads the fresha org.
-          # HEX_ORGANIZATION_WRITE_KEY, which used to do both, is revoked.
-          hex-token: ${{ secrets.GH_FRESHAENGINEERING_ABSINTHE_HELPERS_HEX_PM_API_KEY }}
-          hex-organization-key: ${{ secrets.GH_FRESHAENGINEERING_HEX_PM_API_KEY }}
-          working-directory: ${{ github.workspace }}
+          ref: ${{ env.SHA }}
+          clean: false
+          persist-credentials: true
+      - name: Setup mise
+        uses: step-security/mise-action@2796166110dee826668caddd4bffedae5116e7cd # v4.2.0
+      - name: Install Hex + Rebar
+        run: mix local.hex --force && mix local.rebar --force
+      - name: Get dependencies
+        shell: bash
+        run: |
+          echo "Getting dependencies"
+          mix deps.get
+      - name: Publish Package
+        shell: bash
+        env:
+          HEX_API_KEY: ${{ secrets.GH_FRESHAENGINEERING_ABSINTHE_HELPERS_HEX_PM_API_KEY }}
+        run: |
+          echo "Publishing package"
+          mix hex.publish --yes
