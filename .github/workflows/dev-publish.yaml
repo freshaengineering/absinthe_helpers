@@ -8,7 +8,7 @@ env:
   OTP_VERSION: 27.3
   RELEVANT_FILES: "mix.lock mix.exs lib priv config test"
   REPOSITORY: absinthe_helpers
-  RUNNER_OS: ubuntu22
+  RUNNER_OS: ubuntu24
   SHA: ${{ github.sha }}
 
 concurrency:
