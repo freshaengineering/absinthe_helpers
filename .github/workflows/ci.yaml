@@ -279,6 +279,16 @@ jobs:
       - name: Publish Package
         shell: bash
         env:
+          # Must hold a `fresha` *organization* key carrying the `api:write`
+          # permission. The `fresha` org is the sole hex.pm owner of this
+          # public package, so only a credential authenticating as that org
+          # passes hexpm's package-owner check. A `repository:fresha` key --
+          # what `mix hex.organization key fresha generate` produces by
+          # default -- is read-only and fails the release POST with
+          # "key not authorized for this action" (a 401 on the key's domain,
+          # not on ownership). Mint with:
+          #   mix hex.organization key fresha generate \
+          #     --key-name absinthe-helpers-publish --permission api:write
           HEX_API_KEY: ${{ secrets.GH_FRESHAENGINEERING_ABSINTHE_HELPERS_HEX_PM_API_KEY }}
         run: |
           echo "Publishing package"

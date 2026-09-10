@@ -4,7 +4,7 @@ defmodule AbsintheHelpers.MixProject do
   def project do
     [
       app: :absinthe_helpers,
-      version: "0.2.10",
+      version: "0.2.11",
       elixir: "~> 1.16",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -45,7 +45,7 @@ defmodule AbsintheHelpers.MixProject do
     [
       files: ["lib", "mix.exs", "README*"],
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/surgeventures/absinthe_helpers"}
+      links: %{"GitHub" => "https://github.com/freshaengineering/absinthe_helpers"}
     ]
   end
 
