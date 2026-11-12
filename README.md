@@ -1,10 +1,11 @@
 # Absinthe Helpers
 
-This package provides three key features:
+This package provides four key features:
 
 1. **constraints**: enforce validation rules (like `min`, `max`, etc.) on fields and arguments in your schema
 2. **transforms**: apply custom transformations (like `Trim`, `ToInteger`, etc.) to input fields and arguments
 3. **error formatting**: GraphQL specification compliant error formatting for validation and transform failures
+4. **timeout**: declare in the schema how long a gateway waits for a root query or mutation field
 
 ## Installation
 
@@ -47,22 +48,14 @@ def absinthe_pipeline(config, opts) do
 end
 ```
 
-2. Add constraints to your schema:
+2. Add the directives to your schema:
 
 ```elixir
 defmodule MyApp.Schema do
   use Absinthe.Schema
-  @prototype_schema AbsintheHelpers.Directives.Constraints
+  @prototype_schema AbsintheHelpers.Directives
 
-  directive :constraints do
-    on([:argument_definition, :field_definition, :input_field_definition])
-
-    arg(:min, :integer, description: "Minimum value allowed")
-    arg(:max, :integer, description: "Maximum value allowed")
-    arg(:min_items, :integer, description: "Minimum number of items allowed in a list")
-    arg(:max_items, :integer, description: "Maximum number of items allowed in a list")
-    arg(:regex, :string, description: "Pattern to match for a string")
-  end
+  import_directives AbsintheHelpers.Directives, only: [:constraints, :timeout]
 
   query do
   end
@@ -73,6 +66,8 @@ defmodule MyApp.Schema do
   # ...
 end
 ```
+
+`@prototype_schema` lets fields and arguments use the directives. `import_directives` puts their definitions into the SDL of the schema. A schema takes one `@prototype_schema`, so `AbsintheHelpers.Directives` holds both directives. `AbsintheHelpers.Directives.Constraints` still works for a schema that uses only `constraints`.
 
 ---
 
@@ -109,6 +104,32 @@ field :my_field, :integer do
   resolve(&MyResolver.resolve/3)
 end
 ```
+
+---
+
+## Timeout
+
+The `timeout` directive declares how many milliseconds a gateway waits for a root query or mutation field. The schema does not enforce it: the gateway reads it from the SDL. On other fields it has no effect.
+
+```elixir
+query do
+  field :report, :report do
+    directive(:timeout, ms: 30_000)
+
+    resolve(&MyResolver.resolve/3)
+  end
+end
+```
+
+The SDL shows it on the field:
+
+```graphql
+type RootQueryType {
+  report: Report @timeout(ms: 30000)
+}
+```
+
+`ms` must be a positive integer. Any other value fails at compile time.
 
 ---
 
