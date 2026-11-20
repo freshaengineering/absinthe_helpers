@@ -22,7 +22,7 @@ on:
 jobs:
   dev-publish:
     name: Dev Publish
-    runs-on: runs-on,runner=4cpu-linux-x64
+    runs-on: runs-on/fleet=ubuntu24-4cpu/env=production
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
