@@ -28,7 +28,7 @@ on:
 jobs:
   static:
     name: Static Checks (Elixir ${{ matrix.versions.elixir-version }})
-    runs-on: runs-on,runner=4cpu-linux-x64
+    runs-on: runs-on/fleet=ubuntu24-4cpu/env=production
     outputs:
       HASH: ${{ steps.hash.outputs.HASH }}
     strategy:
@@ -111,7 +111,7 @@ jobs:
 
   test:
     name: Unit Tests (Elixir ${{ matrix.versions.elixir-version }})
-    runs-on: runs-on,runner=2cpu-linux-x64
+    runs-on: runs-on/fleet=ubuntu24-2cpu/env=production
     strategy:
       fail-fast: false
       matrix:
@@ -182,7 +182,7 @@ jobs:
     name: Permit Package Publishing
     timeout-minutes: 25
     needs: [static, test]
-    runs-on: runs-on,runner=1cpu-linux-x64
+    runs-on: runs-on/fleet=ubuntu24-1cpu/env=production
     outputs:
       PUBLISH: ${{ steps.version.outputs.PUBLISH }}
     steps:
@@ -246,7 +246,7 @@ jobs:
     name: Publish Hex Package
     timeout-minutes: 25
     needs: [permit]
-    runs-on: runs-on,runner=2cpu-linux-x64
+    runs-on: runs-on/fleet=ubuntu24-2cpu/env=production
     if: needs.permit.outputs.PUBLISH == 'true' && github.event_name == 'push'
     steps:
       - name: Harden the runner
