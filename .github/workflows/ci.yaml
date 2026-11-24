@@ -248,6 +248,16 @@ jobs:
     needs: [permit]
     runs-on: runs-on,runner=2cpu-linux-x64
     if: needs.permit.outputs.PUBLISH == 'true' && github.event_name == 'push'
+    permissions:
+      contents: read
+      # hex.pm exchanges the job's OIDC token for a short-lived token that can only
+      # publish absinthe_helpers; no Hex key is stored in this repository.
+      id-token: write
+    # hex.pm trusts this job through a workload identity that names this repository,
+    # ci.yaml and this environment. hex.pm has no branch rule of its own, so the
+    # environment's deployment branch rule (main only) is what stops a branch
+    # that edits this file from publishing.
+    environment: hex-publish
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -270,7 +280,8 @@ jobs:
       - name: Setup mise
         uses: step-security/mise-action@6e96d2ffbc65c037f23c78818f2a339d6cf830f7 # v4.2.4
       - name: Install Hex + Rebar
-        run: mix local.hex --force && mix local.rebar --force
+        # Hex 2.6.0 is the first version that publishes with a workload identity.
+        run: mix local.hex 2.7.0 --force && mix local.rebar --force
       - name: Get dependencies
         shell: bash
         run: |
@@ -278,8 +289,8 @@ jobs:
           mix deps.get
       - name: Publish Package
         shell: bash
-        env:
-          HEX_API_KEY: ${{ secrets.GH_FRESHAENGINEERING_ABSINTHE_HELPERS_HEX_PM_API_KEY }}
+        # With no HEX_API_KEY and no user session, mix hex.publish exchanges the
+        # job's OIDC token for a short-lived one.
         run: |
           echo "Publishing package"
           mix hex.publish --yes
