@@ -93,7 +93,16 @@ defmodule AbsintheHelpers.Phases.ApplyTransformsTest do
       }
       """
 
-      assert {:ok, %{errors: [%{code: :invalid_integer, path: ["service", "accumulator"]}]}} =
+      assert {:ok,
+              %{
+                errors: [
+                  %{
+                    code: :invalid_integer,
+                    path: ["accumulator"],
+                    input_path: ["service", "accumulator"]
+                  }
+                ]
+              }} =
                TestSchema.run_query(query)
     end
 
@@ -121,7 +130,8 @@ defmodule AbsintheHelpers.Phases.ApplyTransformsTest do
                       code: :invalid_integer,
                       group_code: :BAD_USER_INPUT,
                       locations: [%{line: 3, column: 5}],
-                      path: ["customer_id"]
+                      path: ["customer_id"],
+                      input_path: ["customer_id"]
                     },
                     %{
                       details: %{},
@@ -129,7 +139,8 @@ defmodule AbsintheHelpers.Phases.ApplyTransformsTest do
                       code: :invalid_integer,
                       group_code: :BAD_USER_INPUT,
                       locations: [%{line: 6, column: 7}],
-                      path: ["service", "override_ids", 1]
+                      path: ["override_ids"],
+                      input_path: ["service", "override_ids", 1]
                     }
                   ]
                 }}
