@@ -151,6 +151,41 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
       assert [%{path: ["customer_id"]}, %{path: ["lines", 0, "quantity"]}] = fields
     end
 
+    @short_description """
+    mutation {
+      create_booking(
+        customer_id: 1,
+        service: {
+          cost: "150.75",
+          description: "bad",
+          override_ids: [6, 7, 8],
+          location_ids: [8, 9, 10],
+          commission_ids: []
+        }
+      )
+    }
+    """
+
+    test "a form mapping errors by path.join(\".\") still finds description in unformatted errors" do
+      assert {:ok, %{errors: [%{path: path}]}} = TestSchema.run_query(@short_description)
+
+      assert Enum.join(path, ".") == "description"
+    end
+
+    test "a form mapping errors by path.join(\".\") still finds description in formatted errors" do
+      assert {:ok, %{errors: [%{extensions: %{details: %{fields: [%{path: path}]}}}]}} =
+               TestSchema.run_formatted_query(@short_description)
+
+      assert Enum.join(path, ".") == "description"
+    end
+
+    test "field_paths: :full moves description to service.description, so a form has to opt in" do
+      assert {:ok, %{errors: [%{extensions: %{details: %{fields: [%{path: path}]}}}]}} =
+               TestSchema.run_formatted_query(@short_description, field_paths: :full)
+
+      assert Enum.join(path, ".") == "service.description"
+    end
+
     test "validates mutation arguments including decimal and string constraints and returns success" do
       query = """
       mutation {
