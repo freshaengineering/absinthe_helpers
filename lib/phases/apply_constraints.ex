@@ -104,11 +104,15 @@ defmodule AbsintheHelpers.Phases.ApplyConstraints do
   defp validate_items(items, private_tags) do
     items
     |> Enum.with_index()
-    |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, acc} ->
-      case validate_item(item, private_tags) do
-        {:ok, validated_item} -> {:cont, {:ok, acc ++ [validated_item]}}
-        {:error, reason, details} -> {:halt, {:error, reason, details, index}}
-      end
+    |> Enum.reduce_while({:ok, []}, fn
+      {%{normalized: %Input.Null{}}, _index}, acc ->
+        {:cont, acc}
+
+      {item, index}, {:ok, acc} ->
+        case validate_item(item, private_tags) do
+          {:ok, validated_item} -> {:cont, {:ok, acc ++ [validated_item]}}
+          {:error, reason, details} -> {:halt, {:error, reason, details, index}}
+        end
     end)
   end
 

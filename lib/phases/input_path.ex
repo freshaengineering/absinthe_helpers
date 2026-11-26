@@ -5,14 +5,15 @@ defmodule AbsintheHelpers.Phases.InputPath do
   alias Absinthe.Blueprint.Input
 
   @doc """
-  Calls `fun` with every argument and input field node of every field in the document, children
-  first, along with the node's path from its argument (`["input", "items", 0, "quantity"]`),
-  and puts back the node `fun` returns.
+  Calls `fun` with every argument and input field node of every field and directive in the
+  document, children first, along with the node's path from its argument
+  (`["input", "items", 0, "quantity"]`), and puts back the node `fun` returns.
   """
   def map(blueprint, fun) do
     Blueprint.prewalk(blueprint, fn
-      field = %Blueprint.Document.Field{arguments: arguments} ->
-        %{field | arguments: Enum.map(arguments, &walk(&1, [&1.name], fun))}
+      node = %type{arguments: arguments}
+      when type in [Blueprint.Document.Field, Blueprint.Directive] ->
+        %{node | arguments: Enum.map(arguments, &walk(&1, [&1.name], fun))}
 
       node ->
         node

@@ -13,9 +13,19 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
 
       @prototype_schema AbsintheHelpers.Directives.Constraints
 
+      directive :limit do
+        on([:field])
+        arg(:count, :integer, directives: [constraints: [min: 1]])
+      end
+
       query do
         field :get_booking, non_null(:string) do
           resolve(&TestResolver.run/3)
+        end
+
+        field :ratings, :string do
+          arg(:scores, list_of(:integer), directives: [constraints: [max: 10]])
+          resolve(fn _, _, _ -> {:ok, "ok"} end)
         end
       end
 
@@ -83,6 +93,16 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
       commission_ids: []
     }
     """
+
+    test "applies constraints to directive arguments" do
+      assert {:ok, %{errors: [%{code: :min_not_met, path: ["count"]}]}} =
+               TestSchema.run_query("{ getBooking @limit(count: 0) }")
+    end
+
+    test "leaves null list items to the list's own nullability" do
+      assert {:ok, %{data: %{"ratings" => "ok"}}} =
+               TestSchema.run_query("{ ratings(scores: [1, null, 10]) }")
+    end
 
     test "reports a field inside a list of input objects with its index" do
       query = """

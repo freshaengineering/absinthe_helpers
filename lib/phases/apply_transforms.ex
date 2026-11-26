@@ -136,6 +136,9 @@ defmodule AbsintheHelpers.Phases.ApplyTransforms do
 
   defp transform_in_sequence_each(_next_transform, {:error, reason}), do: {:error, reason}
 
+  defp transform_in_sequence_each(_next_transform, error = {:error, _reason, _details}),
+    do: error
+
   defp transform_in_sequence_each(next_transform, {:ok, prev_output}) do
     call_transform(next_transform, prev_output)
   end
