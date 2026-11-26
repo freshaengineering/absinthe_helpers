@@ -115,7 +115,7 @@ defmodule AbsintheHelpers.Phases.ApplyTransformsTest do
                       code: :invalid_integer,
                       group_code: :BAD_USER_INPUT,
                       locations: [%{line: 6, column: 7}],
-                      path: ["override_ids"]
+                      path: ["service", "override_ids", 1]
                     }
                   ]
                 }}

@@ -78,6 +78,7 @@ defmodule AbsintheHelpers.Phases.ApplyErrorFormattingTest do
                                path: ["description"],
                                details: %{min: 5},
                                locations: [%{line: 6, column: 7}],
+                               reason: "MIN_NOT_MET",
                                custom_error_code: :min_not_met
                              },
                              %{
@@ -85,6 +86,7 @@ defmodule AbsintheHelpers.Phases.ApplyErrorFormattingTest do
                                path: ["title"],
                                details: %{max: 10},
                                locations: [%{line: 7, column: 7}],
+                               reason: "MAX_EXCEEDED",
                                custom_error_code: :max_exceeded
                              }
                            ]

@@ -13,7 +13,7 @@ Add `absinthe_helpers` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:absinthe_helpers, "~> 0.1.0"}
+    {:absinthe_helpers, "~> 0.3"}
   ]
 end
 ```
@@ -154,7 +154,7 @@ end
 
 The package includes GraphQL specification compliant error formatting. When enabled, validation errors from constraints or transform failures are formatted consistently.
 
-For multiple related errors, they are grouped under a single error with BAD_USER_INPUT code:
+For multiple related errors, they are grouped under a single error with BAD_USER_INPUT code. Each field's `path` starts from the argument name and includes list indexes, and `reason` is the failure in SCREAMING_SNAKE_CASE:
 
 ```json
 {
@@ -167,7 +167,8 @@ For multiple related errors, they are grouped under a single error with BAD_USER
           "fields": [
             {
               "message": "min_not_met",
-              "path": ["description"],
+              "path": ["input", "description"],
+              "reason": "MIN_NOT_MET",
               "details": {
                 "min": 5
               },
@@ -181,7 +182,8 @@ For multiple related errors, they are grouped under a single error with BAD_USER
             },
             {
               "message": "max_exceeded",
-              "path": ["title"],
+              "path": ["input", "lineItems", 1, "quantity"],
+              "reason": "MAX_EXCEEDED",
               "details": {
                 "max": 10
               },
@@ -201,3 +203,7 @@ For multiple related errors, they are grouped under a single error with BAD_USER
   ]
 }
 ```
+
+`custom_error_code` is deprecated in favour of `reason` and will be removed in a later release.
+
+Without `ApplyErrorFormatting` in the pipeline, constraint and transform failures reach the client with `code`, `group_code` and `path` on the error itself and no `extensions`, which no GraphQL client expects. Add it whenever you add `ApplyConstraints` or `ApplyTransforms`.

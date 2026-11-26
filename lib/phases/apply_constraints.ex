@@ -49,9 +49,9 @@ defmodule AbsintheHelpers.Phases.ApplyConstraints do
 
   use Absinthe.Phase
 
-  alias Absinthe.Blueprint
+  alias Absinthe.Blueprint.Input
   alias Absinthe.Phase
-  alias Blueprint.Input
+  alias AbsintheHelpers.Phases.InputPath
 
   def add_to_pipeline(pipeline, opts) do
     Absinthe.Pipeline.insert_before(
@@ -63,47 +63,51 @@ defmodule AbsintheHelpers.Phases.ApplyConstraints do
 
   @impl Absinthe.Phase
   def run(input, _opts \\ []) do
-    {:ok, Blueprint.postwalk(input, &handle_node/1)}
+    {:ok, InputPath.map(input, &handle_node/2)}
   end
 
   defp handle_node(
          node = %{
            input_value: %{normalized: normalized},
            schema_node: %{__private__: private}
-         }
+         },
+         path
        ) do
-    if constraints?(private), do: apply_constraints(node, normalized), else: node
+    if constraints?(private), do: apply_constraints(node, normalized, path), else: node
   end
 
-  defp handle_node(node), do: node
+  defp handle_node(node, _path), do: node
 
-  defp apply_constraints(node, list = %Input.List{items: _items}) do
+  defp apply_constraints(node, list = %Input.List{items: _items}, path) do
     with {:ok, _list} <- validate_list(list, node.schema_node.__private__),
          {:ok, _items} <- validate_items(list.items, node.schema_node.__private__) do
       node
     else
-      {:error, reason, details} -> add_custom_error(node, reason, details)
+      {:error, reason, details} -> add_custom_error(node, path, reason, details)
+      {:error, reason, details, index} -> add_custom_error(node, path ++ [index], reason, details)
     end
   end
 
-  defp apply_constraints(node, %{value: _value}) do
+  defp apply_constraints(node, %{value: _value}, path) do
     case validate_item(node.input_value, node.schema_node.__private__) do
       {:ok, _validated_value} -> node
-      {:error, reason, details} -> add_custom_error(node, reason, details)
+      {:error, reason, details} -> add_custom_error(node, path, reason, details)
     end
   end
 
-  defp apply_constraints(node, _), do: node
+  defp apply_constraints(node, _, _path), do: node
 
   defp validate_list(list, private_tags) do
     apply_constraints_in_sequence(list, get_constraints(private_tags))
   end
 
   defp validate_items(items, private_tags) do
-    Enum.reduce_while(items, {:ok, []}, fn item, {:ok, acc} ->
+    items
+    |> Enum.with_index()
+    |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, acc} ->
       case validate_item(item, private_tags) do
         {:ok, validated_item} -> {:cont, {:ok, acc ++ [validated_item]}}
-        {:error, reason, details} -> {:halt, {:error, reason, details}}
+        {:error, reason, details} -> {:halt, {:error, reason, details, index}}
       end
     end)
   end
@@ -135,7 +139,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraints do
 
   defp constraints?(private), do: private |> get_constraints() |> Enum.any?()
 
-  defp add_custom_error(node, reason, details) do
+  defp add_custom_error(node, path, reason, details) do
     Phase.put_error(node, %Phase.Error{
       phase: __MODULE__,
       message: reason,
@@ -143,7 +147,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraints do
       extra: %{
         group_code: :BAD_USER_INPUT,
         code: reason,
-        path: [node.name],
+        path: path,
         details: details
       }
     })
