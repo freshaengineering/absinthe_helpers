@@ -57,8 +57,8 @@ defmodule AbsintheHelpers.Phases.ApplyTransforms do
 
   use Absinthe.Phase
 
-  alias Absinthe.Blueprint
   alias Absinthe.Blueprint.Input
+  alias AbsintheHelpers.Phases.InputPath
 
   def add_to_pipeline(pipeline, opts) do
     Absinthe.Pipeline.insert_before(
@@ -69,47 +69,50 @@ defmodule AbsintheHelpers.Phases.ApplyTransforms do
   end
 
   def run(input, _opts \\ []) do
-    {:ok, Blueprint.postwalk(input, &handle_node/1)}
+    {:ok, InputPath.map(input, &handle_node/2)}
   end
 
   defp handle_node(
          node = %{
            input_value: %{normalized: normalized},
            schema_node: %{__private__: private}
-         }
+         },
+         path
        ) do
-    if transform?(private), do: apply_transforms(node, normalized), else: node
+    if transform?(private), do: apply_transforms(node, normalized, path), else: node
   end
 
-  defp handle_node(node), do: node
+  defp handle_node(node, _path), do: node
 
-  defp apply_transforms(node, %Input.List{items: items}) do
+  defp apply_transforms(node, %Input.List{items: items}, path) do
     case transform_items(items, node.schema_node.__private__) do
       {:ok, new_items} ->
         %{node | input_value: %{node.input_value | normalized: %Input.List{items: new_items}}}
 
-      {:error, reason, details} ->
-        add_custom_error(node, reason, details)
+      {:error, reason, details, index} ->
+        add_custom_error(node, path ++ [index], reason, details)
     end
   end
 
-  defp apply_transforms(node, %{value: _value}) do
+  defp apply_transforms(node, %{value: _value}, path) do
     case transform_item(node.input_value, node.schema_node.__private__) do
       {:ok, transformed_value} ->
         %{node | input_value: %{node.input_value | data: transformed_value.data}}
 
       {:error, reason, details} ->
-        add_custom_error(node, reason, details)
+        add_custom_error(node, path, reason, details)
     end
   end
 
-  defp apply_transforms(node, _), do: node
+  defp apply_transforms(node, _, _path), do: node
 
   defp transform_items(items, private_tags) do
-    Enum.reduce_while(items, {:ok, []}, fn item, {:ok, acc} ->
+    items
+    |> Enum.with_index()
+    |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, acc} ->
       case transform_item(item, private_tags) do
         {:ok, transformed_item} -> {:cont, {:ok, acc ++ [transformed_item]}}
-        {:error, reason, details} -> {:halt, {:error, reason, details}}
+        {:error, reason, details} -> {:halt, {:error, reason, details, index}}
       end
     end)
   end
@@ -132,6 +135,9 @@ defmodule AbsintheHelpers.Phases.ApplyTransforms do
   defp transform_in_sequence(item, []), do: {:ok, item}
 
   defp transform_in_sequence_each(_next_transform, {:error, reason}), do: {:error, reason}
+
+  defp transform_in_sequence_each(_next_transform, error = {:error, _reason, _details}),
+    do: error
 
   defp transform_in_sequence_each(next_transform, {:ok, prev_output}) do
     call_transform(next_transform, prev_output)
@@ -162,7 +168,7 @@ defmodule AbsintheHelpers.Phases.ApplyTransforms do
     |> Enum.any?()
   end
 
-  defp add_custom_error(node, reason, details) do
+  defp add_custom_error(node, path, reason, details) do
     Absinthe.Phase.put_error(node, %Absinthe.Phase.Error{
       phase: __MODULE__,
       message: reason,
@@ -170,7 +176,7 @@ defmodule AbsintheHelpers.Phases.ApplyTransforms do
       extra: %{
         group_code: :BAD_USER_INPUT,
         code: reason,
-        path: [node.name],
+        path: path,
         details: details
       }
     })

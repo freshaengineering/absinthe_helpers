@@ -59,6 +59,7 @@ defmodule AbsintheHelpers.Phases.ApplyErrorFormatting do
     %{
       message: message,
       path: path,
+      reason: code |> to_string() |> String.upcase(),
       custom_error_code: code,
       details: details,
       locations: locations

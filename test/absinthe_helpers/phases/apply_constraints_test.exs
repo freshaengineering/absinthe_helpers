@@ -2,6 +2,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
   use ExUnit.Case, async: true
 
   alias AbsintheHelpers.Phases.ApplyConstraints
+  alias AbsintheHelpers.Phases.ApplyErrorFormatting
   alias AbsintheHelpers.TestResolver
 
   describe "apply constraints phase with min/max on integers, decimals, and strings" do
@@ -12,9 +13,19 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
 
       @prototype_schema AbsintheHelpers.Directives.Constraints
 
+      directive :limit do
+        on([:field])
+        arg(:count, :integer, directives: [constraints: [min: 1]])
+      end
+
       query do
         field :get_booking, non_null(:string) do
           resolve(&TestResolver.run/3)
+        end
+
+        field :ratings, :string do
+          arg(:scores, list_of(:integer), directives: [constraints: [max: 10]])
+          resolve(fn _, _, _ -> {:ok, "ok"} end)
         end
       end
 
@@ -22,9 +33,14 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
         field(:create_booking, :string) do
           arg(:customer_id, non_null(:integer), directives: [constraints: [min: 1, max: 1000]])
           arg(:service, non_null(:service_input))
+          arg(:lines, list_of(non_null(:line_input)))
 
           resolve(&TestResolver.run/3)
         end
+      end
+
+      input_object :line_input do
+        field(:quantity, :integer, directives: [constraints: [min: 1]])
       end
 
       input_object :service_input do
@@ -54,6 +70,83 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
           pipeline_modifier: &ApplyConstraints.add_to_pipeline/2
         )
       end
+
+      def run_formatted_query(query) do
+        Absinthe.run(
+          query,
+          __MODULE__,
+          pipeline_modifier: fn pipeline, opts ->
+            pipeline
+            |> ApplyConstraints.add_to_pipeline(opts)
+            |> ApplyErrorFormatting.add_to_pipeline(opts)
+          end
+        )
+      end
+    end
+
+    @valid_service """
+    service: {
+      cost: "150.75",
+      description: "Valid description",
+      override_ids: [6, 7, 8],
+      location_ids: [8, 9, 10],
+      commission_ids: []
+    }
+    """
+
+    test "applies constraints to directive arguments" do
+      assert {:ok, %{errors: [%{code: :min_not_met, path: ["count"]}]}} =
+               TestSchema.run_query("{ getBooking @limit(count: 0) }")
+    end
+
+    test "leaves null list items to the list's own nullability" do
+      assert {:ok, %{data: %{"ratings" => "ok"}}} =
+               TestSchema.run_query("{ ratings(scores: [1, null, 10]) }")
+    end
+
+    test "reports a field inside a list of input objects with its index" do
+      query = """
+      mutation {
+        create_booking(customer_id: 1, #{@valid_service}, lines: [{quantity: 2}, {quantity: 0}])
+      }
+      """
+
+      assert {:ok, %{errors: [%{code: :min_not_met, path: ["lines", 1, "quantity"]}]}} =
+               TestSchema.run_query(query)
+    end
+
+    test "formats errors in the GraphQL error standard's shape" do
+      query = """
+      mutation {
+        create_booking(customer_id: 0, #{@valid_service}, lines: [{quantity: 0}])
+      }
+      """
+
+      assert {:ok,
+              %{
+                errors: [
+                  %{
+                    message: "Invalid input",
+                    extensions: %{
+                      code: :BAD_USER_INPUT,
+                      details: %{
+                        fields: [
+                          %{
+                            path: ["customer_id"],
+                            message: :min_not_met,
+                            reason: "MIN_NOT_MET"
+                          },
+                          %{
+                            path: ["lines", 0, "quantity"],
+                            message: :min_not_met,
+                            reason: "MIN_NOT_MET"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }} = TestSchema.run_formatted_query(query)
     end
 
     test "validates mutation arguments including decimal and string constraints and returns success" do
@@ -109,7 +202,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                      code: :min_not_met,
                      group_code: :BAD_USER_INPUT,
                      locations: [%{line: 5, column: 7}],
-                     path: ["cost"]
+                     path: ["service", "cost"]
                    },
                    %{
                      details: %{min: 5},
@@ -117,7 +210,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                      code: :min_not_met,
                      group_code: :BAD_USER_INPUT,
                      locations: [%{line: 6, column: 7}],
-                     path: ["description"]
+                     path: ["service", "description"]
                    },
                    %{
                      details: %{min: 5},
@@ -125,7 +218,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                      code: :min_not_met,
                      group_code: :BAD_USER_INPUT,
                      locations: [%{line: 7, column: 7}],
-                     path: ["override_ids"]
+                     path: ["service", "override_ids", 1]
                    },
                    %{
                      details: %{min_items: 2},
@@ -133,7 +226,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                      code: :min_items_not_met,
                      group_code: :BAD_USER_INPUT,
                      locations: [%{line: 8, column: 7}],
-                     path: ["location_ids"]
+                     path: ["service", "location_ids"]
                    },
                    %{
                      details: %{max_items: 2},
@@ -141,7 +234,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                      code: :max_items_exceeded,
                      group_code: :BAD_USER_INPUT,
                      locations: [%{line: 9, column: 7}],
-                     path: ["commission_ids"]
+                     path: ["service", "commission_ids"]
                    }
                  ]
                }
@@ -173,7 +266,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                     code: :invalid_format,
                     group_code: :BAD_USER_INPUT,
                     locations: [%{line: 6, column: 7}],
-                    path: ["description"]
+                    path: ["service", "description"]
                   }
                 ]
               }} = TestSchema.run_query(query)

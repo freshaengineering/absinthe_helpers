@@ -83,6 +83,20 @@ defmodule AbsintheHelpers.Phases.ApplyTransformsTest do
       assert TestSchema.run_query(query) == {:ok, %{data: %{"create_booking" => ""}}}
     end
 
+    test "reports a failure in the middle of a chain of transforms" do
+      query = """
+      mutation {
+        create_booking(
+          customer_id: "1",
+          service: {employee_id: "456", override_ids: ["1"], accumulator: "abc"}
+        )
+      }
+      """
+
+      assert {:ok, %{errors: [%{code: :invalid_integer, path: ["service", "accumulator"]}]}} =
+               TestSchema.run_query(query)
+    end
+
     test "propagates errors from transforms" do
       query = """
       mutation {
@@ -115,7 +129,7 @@ defmodule AbsintheHelpers.Phases.ApplyTransformsTest do
                       code: :invalid_integer,
                       group_code: :BAD_USER_INPUT,
                       locations: [%{line: 6, column: 7}],
-                      path: ["override_ids"]
+                      path: ["service", "override_ids", 1]
                     }
                   ]
                 }}
