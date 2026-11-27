@@ -154,15 +154,7 @@ end
 
 The package includes GraphQL specification compliant error formatting. When enabled, validation errors from constraints or transform failures are formatted consistently.
 
-For multiple related errors, they are grouped under a single error with BAD_USER_INPUT code. Each field's `reason` is the failure in SCREAMING_SNAKE_CASE.
-
-A field's `path` is the leaf name of the failing argument or input field (`["description"]`), which is what clients have always received. The GraphQL error standard wants the path from the argument instead, with list indexes (`["input", "lineItems", 1, "quantity"]`). Turn that on with `field_paths: :full` once the service's clients map errors by the full path, because a client that does `setError(path.join("."), message)` against a form registered as `description` stops showing the error when the path becomes `input.description`:
-
-```elixir
-|> AbsintheHelpers.Phases.ApplyErrorFormatting.add_to_pipeline(Keyword.put(opts, :field_paths, :full))
-```
-
-With `field_paths: :full`:
+For multiple related errors, they are grouped under a single error with BAD_USER_INPUT code. Each field's `path` starts from the argument name and includes list indexes, and `reason` is the failure in SCREAMING_SNAKE_CASE:
 
 ```json
 {
@@ -214,4 +206,8 @@ With `field_paths: :full`:
 
 `custom_error_code` is deprecated in favour of `reason` and will be removed in a later release.
 
-Without `ApplyErrorFormatting` in the pipeline, constraint and transform failures reach the client with `code`, `group_code` and `path` on the error itself and no `extensions`, which no GraphQL client expects. Add it whenever you add `ApplyConstraints` or `ApplyTransforms`. Those unformatted errors keep the leaf name in `path` as before, and carry the path from the argument in `input_path`.
+Without `ApplyErrorFormatting` in the pipeline, constraint and transform failures reach the client with `code`, `group_code` and `path` on the error itself and no `extensions`, which no GraphQL client expects. Add it whenever you add `ApplyConstraints` or `ApplyTransforms`.
+
+### Upgrading from 0.2
+
+0.3 changes the `path` of constraint and transform failures, formatted or not. In 0.2 it was only the name of the failing argument or input field, `["description"]`. It is now the path from the argument, with list indexes: `["service", "description"]`, `["service", "override_ids", 1]`. A top-level scalar argument keeps the path it had. Anything that finds a field by this `path`, such as a client form or a pipeline phase that rewrites these errors, has to match the full path.

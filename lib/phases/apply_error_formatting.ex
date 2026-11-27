@@ -13,29 +13,28 @@ defmodule AbsintheHelpers.Phases.ApplyErrorFormatting do
   end
 
   @spec run(Blueprint.t() | Phase.Error.t(), Keyword.t()) :: {:ok, Blueprint.t()}
-  def run(blueprint = %Blueprint{}, options) do
-    field_paths = Keyword.get(options, :field_paths, :leaf)
-    {:ok, %{blueprint | result: format_errors(blueprint.result, field_paths)}}
+  def run(blueprint = %Blueprint{}, _options) do
+    {:ok, %{blueprint | result: format_errors(blueprint.result)}}
   end
 
-  defp format_errors(%{errors: errors} = result, field_paths) when is_list(errors) do
-    %{result | errors: format_error_list(errors, field_paths)}
+  defp format_errors(%{errors: errors} = result) when is_list(errors) do
+    %{result | errors: format_error_list(errors)}
   end
 
-  defp format_errors(result, _field_paths), do: result
+  defp format_errors(result), do: result
 
-  defp format_error_list(errors, field_paths) do
+  defp format_error_list(errors) do
     errors
     |> Enum.group_by(&get_error_code/1)
-    |> Enum.flat_map(&format_error_group(&1, field_paths))
+    |> Enum.flat_map(&format_error_group/1)
   end
 
   defp get_error_code(%{group_code: group_code}), do: group_code
   defp get_error_code(_), do: nil
 
-  defp format_error_group({nil, errors}, _field_paths), do: errors
+  defp format_error_group({nil, errors}), do: errors
 
-  defp format_error_group({group_code, errors}, field_paths) do
+  defp format_error_group({group_code, errors}) do
     [
       %{
         message: "Invalid input",
@@ -43,26 +42,23 @@ defmodule AbsintheHelpers.Phases.ApplyErrorFormatting do
         extensions: %{
           code: group_code,
           details: %{
-            fields: Enum.map(errors, &format_field(&1, field_paths))
+            fields: Enum.map(errors, &format_field/1)
           }
         }
       }
     ]
   end
 
-  defp format_field(
-         error = %{
-           message: message,
-           locations: locations,
-           path: path,
-           code: code,
-           details: details
-         },
-         field_paths
-       ) do
+  defp format_field(%{
+         message: message,
+         locations: locations,
+         path: path,
+         code: code,
+         details: details
+       }) do
     %{
       message: message,
-      path: if(field_paths == :full, do: Map.get(error, :input_path, path), else: path),
+      path: path,
       reason: code |> to_string() |> String.upcase(),
       custom_error_code: code,
       details: details,
@@ -70,5 +66,5 @@ defmodule AbsintheHelpers.Phases.ApplyErrorFormatting do
     }
   end
 
-  defp format_field(error, _field_paths), do: error
+  defp format_field(error), do: error
 end

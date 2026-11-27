@@ -71,14 +71,14 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
         )
       end
 
-      def run_formatted_query(query, formatting_opts \\ []) do
+      def run_formatted_query(query) do
         Absinthe.run(
           query,
           __MODULE__,
           pipeline_modifier: fn pipeline, opts ->
             pipeline
             |> ApplyConstraints.add_to_pipeline(opts)
-            |> ApplyErrorFormatting.add_to_pipeline(opts ++ formatting_opts)
+            |> ApplyErrorFormatting.add_to_pipeline(opts)
           end
         )
       end
@@ -104,86 +104,49 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                TestSchema.run_query("{ ratings(scores: [1, null, 10]) }")
     end
 
-    test "reports a field inside a list of input objects with its full path as input_path" do
+    test "reports a field inside a list of input objects with its index" do
       query = """
       mutation {
         create_booking(customer_id: 1, #{@valid_service}, lines: [{quantity: 2}, {quantity: 0}])
       }
       """
 
-      assert {:ok,
-              %{
-                errors: [
-                  %{code: :min_not_met, path: ["quantity"], input_path: ["lines", 1, "quantity"]}
-                ]
-              }} =
+      assert {:ok, %{errors: [%{code: :min_not_met, path: ["lines", 1, "quantity"]}]}} =
                TestSchema.run_query(query)
     end
 
-    test "formats field errors with the leaf name as the path by default" do
+    test "formats errors in the GraphQL error standard's shape" do
       query = """
       mutation {
         create_booking(customer_id: 0, #{@valid_service}, lines: [{quantity: 0}])
       }
       """
 
-      assert {:ok, %{errors: [%{extensions: %{code: :BAD_USER_INPUT, details: %{fields: fields}}}]}} =
-               TestSchema.run_formatted_query(query)
-
-      assert [
-               %{path: ["customer_id"], reason: "MIN_NOT_MET"},
-               %{path: ["quantity"], reason: "MIN_NOT_MET"}
-             ] = fields
-
-      refute Enum.any?(fields, &Map.has_key?(&1, :input_path))
-    end
-
-    test "formats field errors with the path from the argument with field_paths: :full" do
-      query = """
-      mutation {
-        create_booking(customer_id: 0, #{@valid_service}, lines: [{quantity: 0}])
-      }
-      """
-
-      assert {:ok, %{errors: [%{extensions: %{details: %{fields: fields}}}]}} =
-               TestSchema.run_formatted_query(query, field_paths: :full)
-
-      assert [%{path: ["customer_id"]}, %{path: ["lines", 0, "quantity"]}] = fields
-    end
-
-    @short_description """
-    mutation {
-      create_booking(
-        customer_id: 1,
-        service: {
-          cost: "150.75",
-          description: "bad",
-          override_ids: [6, 7, 8],
-          location_ids: [8, 9, 10],
-          commission_ids: []
-        }
-      )
-    }
-    """
-
-    test "a form mapping errors by path.join(\".\") still finds description in unformatted errors" do
-      assert {:ok, %{errors: [%{path: path}]}} = TestSchema.run_query(@short_description)
-
-      assert Enum.join(path, ".") == "description"
-    end
-
-    test "a form mapping errors by path.join(\".\") still finds description in formatted errors" do
-      assert {:ok, %{errors: [%{extensions: %{details: %{fields: [%{path: path}]}}}]}} =
-               TestSchema.run_formatted_query(@short_description)
-
-      assert Enum.join(path, ".") == "description"
-    end
-
-    test "field_paths: :full moves description to service.description, so a form has to opt in" do
-      assert {:ok, %{errors: [%{extensions: %{details: %{fields: [%{path: path}]}}}]}} =
-               TestSchema.run_formatted_query(@short_description, field_paths: :full)
-
-      assert Enum.join(path, ".") == "service.description"
+      assert {:ok,
+              %{
+                errors: [
+                  %{
+                    message: "Invalid input",
+                    extensions: %{
+                      code: :BAD_USER_INPUT,
+                      details: %{
+                        fields: [
+                          %{
+                            path: ["customer_id"],
+                            message: :min_not_met,
+                            reason: "MIN_NOT_MET"
+                          },
+                          %{
+                            path: ["lines", 0, "quantity"],
+                            message: :min_not_met,
+                            reason: "MIN_NOT_MET"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }} = TestSchema.run_formatted_query(query)
     end
 
     test "validates mutation arguments including decimal and string constraints and returns success" do
@@ -239,8 +202,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                      code: :min_not_met,
                      group_code: :BAD_USER_INPUT,
                      locations: [%{line: 5, column: 7}],
-                     path: ["cost"],
-                     input_path: ["service", "cost"]
+                     path: ["service", "cost"]
                    },
                    %{
                      details: %{min: 5},
@@ -248,8 +210,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                      code: :min_not_met,
                      group_code: :BAD_USER_INPUT,
                      locations: [%{line: 6, column: 7}],
-                     path: ["description"],
-                     input_path: ["service", "description"]
+                     path: ["service", "description"]
                    },
                    %{
                      details: %{min: 5},
@@ -257,8 +218,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                      code: :min_not_met,
                      group_code: :BAD_USER_INPUT,
                      locations: [%{line: 7, column: 7}],
-                     path: ["override_ids"],
-                     input_path: ["service", "override_ids", 1]
+                     path: ["service", "override_ids", 1]
                    },
                    %{
                      details: %{min_items: 2},
@@ -266,8 +226,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                      code: :min_items_not_met,
                      group_code: :BAD_USER_INPUT,
                      locations: [%{line: 8, column: 7}],
-                     path: ["location_ids"],
-                     input_path: ["service", "location_ids"]
+                     path: ["service", "location_ids"]
                    },
                    %{
                      details: %{max_items: 2},
@@ -275,8 +234,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                      code: :max_items_exceeded,
                      group_code: :BAD_USER_INPUT,
                      locations: [%{line: 9, column: 7}],
-                     path: ["commission_ids"],
-                     input_path: ["service", "commission_ids"]
+                     path: ["service", "commission_ids"]
                    }
                  ]
                }
@@ -308,8 +266,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraintsTest do
                     code: :invalid_format,
                     group_code: :BAD_USER_INPUT,
                     locations: [%{line: 6, column: 7}],
-                    path: ["description"],
-                    input_path: ["service", "description"]
+                    path: ["service", "description"]
                   }
                 ]
               }} = TestSchema.run_query(query)

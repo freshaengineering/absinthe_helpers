@@ -151,8 +151,7 @@ defmodule AbsintheHelpers.Phases.ApplyConstraints do
       extra: %{
         group_code: :BAD_USER_INPUT,
         code: reason,
-        path: [node.name],
-        input_path: path,
+        path: path,
         details: details
       }
     })
