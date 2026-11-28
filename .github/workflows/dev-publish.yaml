@@ -19,6 +19,9 @@ on:
   workflow_dispatch:
     inputs: {}
 
+permissions:
+  contents: read
+
 jobs:
   dev-publish:
     name: Dev Publish
